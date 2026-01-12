@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Realistic Midnight Fireworks - Final</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: black; }
+        canvas { display: block; cursor: crosshair; }
+        #bg-image {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; z-index: -1; filter: brightness(0.5);
+        }
+    </style>
+</head>
+<body>
+    <img id="bg-image" src="https://th.bing.com/th/id/R.cecb2124f4ad45973eace5cf1e524e35?rik=y9BAWXaqQR%2bDNQ&riu=http%3a%2f%2fcdn.dealbada.com%2fdata%2feditor%2f1609%2f8294ca978c512149f2ed38a682ff633f_1472709882_775.jpg&ehk=pOMnYXbsd7Et289donroavbRmyNcZrLsLvxDMHZunGI%3d&risl=&pid=ImgRaw&r=0">
+    <canvas id="canvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let state = { fireworks: [], particles: [] };
+
+    class Firework {
+        constructor(sx, sy, tx, ty) {
+            this.x = sx; this.y = sy;
+            this.tx = tx; this.ty = ty;
+            this.coordinates = [];
+            this.coordinateCount = 3;
+            while(this.coordinateCount--) { this.coordinates.push([this.x, this.y]); }
+            this.angle = Math.atan2(ty - sy, tx - sx);
+            this.speed = 3; // 초기 속도 약간 업
+            this.acceleration = 1.05;
+            this.brightness = Math.random() * 50 + 50;
+        }
+        update(index) {
+            this.coordinates.pop();
+            this.coordinates.unshift([this.x, this.y]);
+            this.speed *= this.acceleration;
+            let vx = Math.cos(this.angle) * this.speed;
+            let vy = Math.sin(this.angle) * this.speed;
+            if(this.y <= this.ty) {
+                explode(this.tx, this.ty);
+                state.fireworks.splice(index, 1);
+            } else {
+                this.x += vx; this.y += vy;
+            }
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+            ctx.lineTo(this.x, this.y);
+            ctx.strokeStyle = `hsl(${Math.random() * 360}, 100%, ${this.brightness}%)`;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+    }
+
+    class Particle {
+        constructor(x, y) {
+            this.x = x; this.y = y;
+            this.coordinates = [];
+            this.coordinateCount = 5;
+            while(this.coordinateCount--) { this.coordinates.push([this.x, this.y]); }
+            this.angle = Math.random() * Math.PI * 2;
+            this.speed = Math.random() * 10 + 2; 
+            this.friction = 0.95;
+            this.gravity = 0.8; // 더 묵직하게 떨어짐
+            this.hue = Math.random() * 360;
+            this.alpha = 1;
+            this.decay = Math.random() * 0.02 + 0.01;
+        }
+        update(index) {
+            this.coordinates.pop();
+            this.coordinates.unshift([this.x, this.y]);
+            this.speed *= this.friction;
+            this.x += Math.cos(this.angle) * this.speed;
+            this.y += Math.sin(this.angle) * this.speed + this.gravity;
+            this.alpha -= this.decay;
+            if(this.alpha <= this.decay) state.particles.splice(index, 1);
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.moveTo(this.coordinates[this.coordinates.length - 1][0], this.coordinates[this.coordinates.length - 1][1]);
+            ctx.lineTo(this.x, this.y);
+            ctx.strokeStyle = `hsla(${this.hue}, 100%, 70%, ${this.alpha})`;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+    }
+
+    function explode(x, y) {
+        let count = 100; // 렉 방지를 위해 개수 살짝 조절
+        while(count--) { state.particles.push(new Particle(x, y)); }
+    }
+
+    function loop() {
+        // 성능과 잔상을 동시에 잡는 최적화 기법
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = 'lighter';
+
+        state.fireworks.forEach((f, i) => { f.update(i); f.draw(); });
+        state.particles.forEach((p, i) => { p.update(i); p.draw(); });
+
+        requestAnimationFrame(loop);
+    }
+
+    window.addEventListener('mousedown', (e) => {
+        state.fireworks.push(new Firework(canvas.width / 2, canvas.height, e.clientX, e.clientY));
+    });
+
+    loop();
+</script>
+</body>
+</html>
