@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>과제 피하기 게임</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* 3. 디자인: 배경은 칠판 색, 글씨는 분필 느낌으로 */
+        body {
+            margin: 0;
+            overflow: hidden; /* 게임 화면 밖으로 요소가 나가지 않도록 함 */
+            background-color: #3A615A; /* 칠판과 유사한 짙은 초록색 */
+            color: white; /* 분필 같은 흰색 글씨 */
+            font-family: 'Nanum Pen Script', cursive, sans-serif; /* 손글씨 느낌의 폰트 */
+        }
+
+        #game-board {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* 2-1. 플레이어는 '😱(학생)' 이모지 */
+        #player {
+            position: absolute;
+            font-size: 2.5rem; /* 이모지 크기 */
+            bottom: 20px;
+            transition: left 0.1s linear; /* 부드러운 이동 효과 */
+        }
+
+        /* 2-2. 하늘에서 떨어지는 '📄(과제)' 이모지 */
+        .paper {
+            position: absolute;
+            font-size: 2rem;
+            top: -40px; /* 화면 위에서 시작 */
+        }
+
+        /* 2-4. 점수는 화면 왼쪽 위에 표시 */
+        #score-board {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        #game-over-message {
+            display: none; /* 평소에는 숨김 */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-board">
+        <div id="score-board">점수: 0</div>
+        <div id="player">😱</div>
+        <div id="game-over-message">
+            으악! 과제 폭탄!<br>
+            <small style="font-size: 1.5rem;">새로고침(F5)으로 재시작</small>
+        </div>
+    </div>
+
+    <script>
+        const gameBoard = document.getElementById('game-board');
+        const player = document.getElementById('player');
+        const scoreBoard = document.getElementById('score-board');
+        const gameOverMessage = document.getElementById('game-over-message');
+
+        let score = 0;
+        let playerLeft = window.innerWidth / 2; // 플레이어 초기 위치 (화면 중앙)
+        const playerSpeed = 25; // 플레이어 이동 속도
+        let isGameOver = false;
+        let gameInterval;
+        let paperInterval;
+
+        // 플레이어 초기 위치 설정
+        player.style.left = `${playerLeft}px`;
+
+        // 2-1. 좌우 방향키로 플레이어 움직이기
+        document.addEventListener('keydown', (e) => {
+            if (isGameOver) return;
+            if (e.key === 'ArrowLeft') {
+                playerLeft -= playerSpeed;
+            } else if (e.key === 'ArrowRight') {
+                playerLeft += playerSpeed;
+            }
+
+            // 플레이어가 화면 밖으로 나가지 않도록 제한
+            if (playerLeft < 0) playerLeft = 0;
+            if (playerLeft > window.innerWidth - player.clientWidth) {
+                playerLeft = window.innerWidth - player.clientWidth;
+            }
+
+            player.style.left = `${playerLeft}px`;
+        });
+
+        // 2-2. 하늘에서 과제 떨어뜨리기
+        function createPaper() {
+            if (isGameOver) return;
+            const paper = document.createElement('div');
+            paper.innerText = '📄';
+            paper.classList.add('paper');
+            paper.style.left = `${Math.random() * (window.innerWidth - 30)}px`;
+            gameBoard.appendChild(paper);
+        }
+
+        // 게임 핵심 로직 (애니메이션, 충돌 감지, 점수)
+        function gameLoop() {
+            if (isGameOver) return;
+
+            // 모든 과제들을 아래로 이동
+            const papers = document.querySelectorAll('.paper');
+            papers.forEach(paper => {
+                const paperTop = parseFloat(paper.style.top || 0);
+                paper.style.top = `${paperTop + 5}px`; // 과제 낙하 속도
+
+                // 화면 밖으로 나간 과제 제거
+                if (paperTop > window.innerHeight) {
+                    paper.remove();
+                    // 2-4. 과제를 피할 때마다 점수 획득
+                    score += 10;
+                    scoreBoard.innerText = `점수: ${score}`;
+                }
+                
+                // 2-3. 플레이어와 과제 충돌 감지
+                const playerRect = player.getBoundingClientRect();
+                const paperRect = paper.getBoundingClientRect();
+
+                if (
+                    playerRect.left < paperRect.right &&
+                    playerRect.right > paperRect.left &&
+                    playerRect.top < paperRect.bottom &&
+                    playerRect.bottom > paperRect.top
+                ) {
+                    endGame();
+                }
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 2-3. 게임 종료 처리
+        function endGame() {
+            isGameOver = true;
+            clearInterval(paperInterval); // 과제 생성 중단
+            alert('으악! 과제 폭탄!'); // 알림창 표시
+            gameOverMessage.style.display = 'block'; // 게임오버 메시지 표시
+        }
+        
+        // 게임 시작
+        function startGame() {
+            // 0.8초마다 새 과제 생성
+            paperInterval = setInterval(createPaper, 800);
+            // 게임 루프 시작
+            requestAnimationFrame(gameLoop);
+        }
+
+        startGame();
+    </script>
+</body>
+</html>
