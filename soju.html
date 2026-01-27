@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>20살의 진짜 만취 체험: LAST NIGHT</title>
+    <style>
+        body { 
+            background: #050505; color: white; margin: 0;
+            transition: all 1s ease-in-out; height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Pretendard', sans-serif; overflow: hidden;
+        }
+        .screen { 
+            padding: 50px; border: 1px solid #333; border-radius: 30px; 
+            text-align: center; background: rgba(20, 20, 30, 0.8);
+            box-shadow: 0 0 50px rgba(0,0,0,0.8); backdrop-filter: blur(10px);
+            max-width: 500px; width: 90%; position: relative;
+        }
+        .btn-drink { 
+            background: #2ecc71; border: none; padding: 18px 40px; 
+            border-radius: 15px; color: #000; font-weight: 800; 
+            cursor: pointer; font-size: 1.3rem; transition: 0.3s;
+            z-index: 999;
+        }
+        .msg { font-size: 1.2rem; line-height: 1.8; min-height: 4em; color: #ddd; margin: 20px 0; }
+        
+        /* 어지러움 애니메이션 */
+        @keyframes dizzy { 
+            0% { transform: rotate(0deg) scale(1); filter: hue-rotate(0deg); }
+            33% { transform: rotate(var(--deg)) scale(1.05); filter: hue-rotate(90deg); }
+            66% { transform: rotate(calc(var(--deg) * -1)) scale(0.95); filter: hue-rotate(180deg); }
+            100% { transform: rotate(0deg) scale(1); filter: hue-rotate(360deg); }
+        }
+
+        /* 셧다운 애니메이션 (12잔 엔딩용) */
+        @keyframes shutdown {
+            0% { opacity: 1; transform: scale(1); filter: brightness(1); }
+            100% { opacity: 0; transform: scale(0.1); filter: brightness(5); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="ssr-app"></div>
+
+<script>
+    // 1. 서버 데이터 (State)
+    let userState = { shots: 0 };
+
+    // 2. 오타 제조기 (SSR 전용 텍스트 가공 로직)
+    function makeGlitch(text, level) {
+        if (level < 7) return text;
+        // 10잔 이후에는 글자가 더 심하게 깨지도록 확률 조정
+        const rate = level >= 10 ? 0.6 : (level * 0.05);
+        return text.split('').map(c => Math.random() < rate ? (Math.random() > 0.5 ? '?' : '!') : c).join('');
+    }
+
+    // 3. SSR 조립 엔진 (The Core)
+    function buildPage() {
+        const s = userState.shots;
+        
+        // (1) 12잔 이상: 엔딩 (기절)
+        if (s >= 12) {
+            document.body.style.animation = "shutdown 2s forwards";
+            setTimeout(() => {
+                document.body.innerHTML = "<h1 style='color:white; font-size:3rem;'>다음날 아침... <br><br> 🏥 응급실입니다.</h1>";
+                document.body.style.background = "white";
+                document.body.style.color = "black";
+                document.body.style.opacity = "1";
+            }, 2000);
+            return;
+        }
+
+        // (2) 데이터에 따른 설정 (Server Decision)
+        let config = {
+            deg: "0deg", blur: "0px", bright: "1", grayscale: "0",
+            status: "멀쩡함 🙂",
+            msg: "이제 막 시작했습니다. 정신은 아직 또렷합니다.", bg: "#050505"
+        };
+
+        if (s >= 2 && s < 4) {
+            config = { deg: "2deg", blur: "1.5px", bright: "1.2", grayscale: "0", status: "알딸딸 😄", msg: "목소리가 커집니다. 기분이 아주 좋네요!", bg: "#0a1a0a" };
+        } else if (s >= 4 && s < 7) {
+            config = { deg: "7deg", blur: "4px", bright: "0.8", grayscale: "0", status: "비틀거림 😵‍💫", msg: "천장이 조금씩 돕니다. 화장실이 어디였죠?", bg: "#1a0a0a" };
+        } else if (s >= 7 && s < 10) {
+            config = { deg: "20deg", blur: "12px", bright: "0.5", grayscale: "0.3", status: "필름 끊김 🫥", msg: "누구한테 전화하는 거예요? 정신 차리세요!", bg: "#1a1a1a" };
+        } else if (s >= 10) {
+            // 10잔 이상: 내일이 없는 사람 
+            config = { deg: "45deg", blur: "22px", bright: "0.25", grayscale: "1", status: "내일이 없는 사람 ☠️", msg: "ㅇㅓ...ㅇㅕㄱㅣㄱㅏ....ㄴㅜㄱㅜ....", bg: "#000" };
+        }
+
+        // (3) 버튼 도망가기 로직
+        let runaway = "";
+        if (s >= 7 && s < 10) {
+            runaway = `position: fixed; left: ${Math.random()*80}%; top: ${Math.random()*80}%; transform: translate(-50%, -50%);`;
+        } else if (s >= 10) {
+            // 버튼이 흐릿하지만 아예 사라지진 않게(0.3) 설정
+            runaway = `position: fixed; left: ${Math.random()*80 + 10}%; top: ${Math.random()*80 + 10}%; opacity: 0.3; transform: scale(0.7) translate(-50%, -50%);`;
+        }
+
+        // (4) 최종 조립 (SSR 이어붙이기)
+        const assembledHTML = `
+            <div class="screen" style="
+                --deg: ${config.deg}; 
+                filter: blur(${config.blur}) brightness(${config.bright}) grayscale(${config.grayscale});
+                animation: dizzy ${s > 3 ? (s >= 10 ? '0.7s' : '2.5s') : '0s'} infinite ease-in-out;
+            ">
+                <h2 style="color: #444; letter-spacing: 5px;">${s >= 10 ? 'SYSTEM FAILURE' : 'SOJU SIMULATOR'}</h2>
+                <h1 style="font-size: 5rem; margin: 20px 0; color: ${s >= 10 ? 'red' : '#2ecc71'};">${s} 잔</h1>
+                <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 15px; font-size: 1.8rem; margin: 20px 0;">
+                    ${config.status}
+                </div>
+                <p class="msg">${makeGlitch(config.msg, s)}</p>
+                
+                <button class="btn-drink" 
+                    onclick="handleDrink()"
+                    style="${runaway}">
+                    ${s >= 10 ? '기...절...?' : '소주 한 잔 더!'}
+                </button>
+                
+                <p style="margin-top: 30px; font-size: 0.8rem; color: #333;">// SSR Status: 1병 기준 붕괴 시스템 가동 중</p>
+            </div>
+        `;
+
+        document.getElementById('ssr-app').innerHTML = assembledHTML;
+        document.body.style.background = config.bg;
+    }
+
+    function handleDrink() {
+        userState.shots += 1;
+        buildPage();
+    }
+
+    buildPage();
+</script>
+</body>
+</html>
